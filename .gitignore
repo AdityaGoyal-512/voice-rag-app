@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Environment and credentials
+.env
+*.json
+
+# Static generated audio
+static/*.mp3
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Database and logs
+*.db
+*.sqlite3
+*.log

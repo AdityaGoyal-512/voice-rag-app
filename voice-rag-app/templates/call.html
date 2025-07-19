@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Make Outbound Call - Voice RAG</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 2em; }
+        .section { margin-bottom: 2em; }
+        button { margin: 0.5em; padding: 1em; font-size: 1em; }
+        input { padding: 0.5em; margin: 0.5em; font-size: 1em; }
+        #call-status { margin-top: 1em; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>Make Outbound Call</h1>
+    <div class="section">
+        <h2>Call a Phone Number</h2>
+        <form id="call-form">
+            <label for="phone">Phone Number (with country code):</label>
+            <input type="text" id="phone" name="to_number" placeholder="+15551234567" required>
+            <br>
+            <button type="submit">Make Call</button>
+        </form>
+        <div id="call-status"></div>
+    </div>
+    
+    <div class="section">
+        <a href="/">← Back to Main Page</a>
+    </div>
+
+    <script>
+        document.getElementById('call-form').onsubmit = async function(e) {
+            e.preventDefault();
+            const phone = document.getElementById('phone').value;
+            const formData = new FormData();
+            formData.append('to_number', phone);
+            
+            document.getElementById('call-status').innerText = 'Initiating call...';
+            
+            try {
+                const resp = await fetch('/call', { 
+                    method: 'POST', 
+                    body: formData 
+                });
+                const data = await resp.json();
+                
+                if (data.status === 'success') {
+                    document.getElementById('call-status').innerText = data.message;
+                } else {
+                    document.getElementById('call-status').innerText = 'Error: ' + data.error;
+                }
+            } catch (error) {
+                document.getElementById('call-status').innerText = 'Error: ' + error.message;
+            }
+        };
+    </script>
+</body>
+</html> 

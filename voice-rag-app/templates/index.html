@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Voice RAG WebApp</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 2em; }
+        .section { margin-bottom: 2em; }
+        button { margin: 0.5em; padding: 1em; font-size: 1em; }
+        #answer { margin-top: 1em; font-weight: bold; }
+        .call-section { background: #f0f0f0; padding: 1em; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <h1>Voice RAG WebApp</h1>
+    <div class="section">
+        <h2>Set Knowledge Base</h2>
+        <form id="kb-form">
+            <label>Upload PDF: <input type="file" id="pdf-input" name="pdf"></label>
+            <br>
+            <label>or Enter URL: <input type="text" id="url-input" name="url"></label>
+            <br>
+            <button type="submit">Set Knowledge Base</button>
+        </form>
+        <div id="kb-status"></div>
+    </div>
+    <div class="section">
+        <h2>Web-Based Voice Chat (Whisper)</h2>
+        <p>Click the button below to start a voice conversation using your browser's microphone.</p>
+        <button id="record-whisper">🎤 Start Voice Chat with Whisper</button>
+        <div id="recording-status"></div>
+        <audio id="audio-playback" controls style="display:none;"></audio>
+        <div id="answer"></div>
+    </div>
+    <div class="section call-section">
+        <h2>📞 Outbound Phone Call Feature</h2>
+        <p>Make outbound phone calls to ask questions and get answers via voice.</p>
+        <a href="/call"><button>📞 Go to Call Management</button></a>
+        <p><small>• To make calls: Use the call management page to dial any number.</small></p>
+    </div>
+    <script>
+        // --- Knowledge Base Form ---
+        document.getElementById('kb-form').onsubmit = async function(e) {
+            e.preventDefault();
+            const pdf = document.getElementById('pdf-input').files[0];
+            const url = document.getElementById('url-input').value;
+            const formData = new FormData();
+            if (pdf) formData.append('pdf', pdf);
+            if (url) formData.append('url', url);
+            const resp = await fetch('/set_knowledge_base', { method: 'POST', body: formData });
+            const data = await resp.json();
+            document.getElementById('kb-status').innerText = data.message;
+        };
+
+        // --- Audio Recording ---
+        let mediaRecorder, audioChunks;
+        async function recordAndSend(endpoint) {
+            document.getElementById('answer').innerText = '';
+            document.getElementById('audio-playback').style.display = 'none';
+            document.getElementById('recording-status').innerText = 'Recording... Speak now!';
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            audioChunks = [];
+            mediaRecorder = new MediaRecorder(stream);
+            mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+            mediaRecorder.onstop = async () => {
+                document.getElementById('recording-status').innerText = 'Processing...';
+                const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                const formData = new FormData();
+                formData.append('audio', audioBlob, 'audio.wav');
+                const resp = await fetch(endpoint, { method: 'POST', body: formData });
+                const data = await resp.json();
+                document.getElementById('answer').innerText = data.text;
+                if (data.audio_url) {
+                    const audio = document.getElementById('audio-playback');
+                    audio.src = data.audio_url;
+                    audio.style.display = 'block';
+                    audio.load();
+                }
+                document.getElementById('recording-status').innerText = '';
+            };
+            mediaRecorder.start();
+            setTimeout(() => mediaRecorder.stop(), 5000); // 5 seconds
+        }
+        document.getElementById('record-whisper').onclick = () => recordAndSend('/ask_whisper');
+    </script>
+</body>
+</html>
